@@ -3,8 +3,9 @@ Ben and Paulette's final project for B522.
 
 Formalizing the Semantics of microKanren
 
-	We would like to use Agda to formalize the semantics of miniKanren, specifically the most concise implementation of miniKanren, called µKanren (found at https://github.com/jasonhemann/microKanren) , done by Jason Hemann and Dan Friedman with their 2013 paper µKanren: A Minimal Functional Core for Relational Programming.
- 	This project will consist of formalizing the functions running under the hood in µKanren. The core language has essentially 5 core functions that together perform unification: walk, unify, call/fresh, mplus, and bind. In addition, 3 essential forms make up the language: ==, disj, and conj, which use these internal functions. And then there are higher-level forms, like run, conde, condu, and fresh, but including several others, which are built on top of these core forms (some are functions, and some are macros).
+ We would like to use Agda to formalize the semantics of miniKanren, specifically the most concise implementation of miniKanren, called µKanren (found at https://github.com/jasonhemann/microKanren) , done by Jason Hemann and Dan Friedman with their 2013 paper µKanren: A Minimal Functional Core for Relational Programming.
+	
+ This project will consist of formalizing the functions running under the hood in µKanren. The core language has essentially 5 core functions that together perform unification: walk, unify, call/fresh, mplus, and bind. In addition, 3 essential forms make up the language: ==, disj, and conj, which use these internal functions. And then there are higher-level forms, like run, conde, condu, and fresh, but including several others, which are built on top of these core forms (some are functions, and some are macros).
 
 A possible itinerary:
 
