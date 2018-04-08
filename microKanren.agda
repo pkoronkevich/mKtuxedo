@@ -3,7 +3,7 @@ module microKanren where
 open import Data.Empty
 open import Data.Unit hiding (_≟_)
 open import Data.Nat hiding (_≟_)
-open import Data.String hiding (_==_)
+open import Data.String as S
 open import Data.Vec hiding (_∈_)
 open import Data.List hiding ([_]) 
 open import Data.Sum
@@ -13,6 +13,7 @@ open import Relation.Nullary
 open import Relation.Binary
 open import Relation.Nullary.Decidable
 open import Relation.Binary.PropositionalEquality hiding ([_])
+open import Data.Bool hiding (_≟_)
 
 --------------- Type declarations ---------------
 Var : Set
@@ -42,31 +43,57 @@ data Subst : Set where
 data _∈_ : (Var × Val) → Subst → Set where
   here : ∀ {s x v} → (x , v) ∈ ((x , v) , s)
   skip : ∀ {s x v x' v'} →
-   {α : False (x ≟ x')} → ((var x)  , v) ∈ s → ((var x)  , v) ∈ (([ x' ] , v') , s)
+   {α : False (x ≟ x')} → ((var x) , v) ∈ s → ((var x) , v) ∈ (([ x' ] , v') , s)
+
+-- _∈?_ : Decidable _∈_
+-- (x , v) ∈? □ = no (λ ())
+-- (  x ∷ [] , v) ∈? (( x' ∷ [] , v') , s) = if (x == x') then yes here else ?
+
+data _∉_ : (Var × Val) → Subst → Set where
+  empty : ∀ {x v} → (x , v) ∉ □
+  nope  : ∀ {s x v x' v'} → {α : False (x ≟ x')} →
+   ((var x) , v) ∉ s → ((var x) , v) ∉ (([ x' ] , v') , s)
+
 
 extend : Var → Val → Subst → Subst
 extend x v s = (x , v) , s
 
 data _walks_to_ : Subst → Val → Val → Set where
-  walkN : ∀ {s x v} → s walks (VNum x) to v
-  walkS : ∀ {s x v} → s walks (VStr x) to v
-  walkFr : ∀ {s x v} → ¬ (x , v) ∈ s → s walks (VVar x) to (VVar x)
-  walkGo : ∀ {s x v x'} → s walks (VVar x') to v → (x , (VVar x')) ∈ s →
+  walkN : ∀ {s x} → s walks (VNum x) to (VNum x)
+  walkS : ∀ {s x} → s walks (VStr x) to (VStr x)
+  walkFr : ∀ {s x v} → (x , v) ∉ s → s walks (VVar x) to (VVar x)
+  walkGo : ∀ {s x v x'} → s walks x' to v → (x , x') ∈ s →
             s walks (VVar x) to v
 
-data _unifies_w/_ : Subst → Val → Val → Set where
+data _unifies_w/_to_ : Subst → Val → Val → Subst → Set where
   Uvars : ∀ {u v s u' v'} → {α : True (u' ≟ v')}
     → s walks (VVar u) to (VVar (var u')) → s walks (VVar v) to (VVar (var v'))
-    → s unifies (VVar u) w/ (VVar v)
+    → s unifies (VVar u) w/ (VVar v) to s
   UvarL : ∀ {u v s u' v'} →
-    s walks (VVar u) to (VVar u') → s walks v to v' → s unifies (VVar u) w/ v
+    s walks (VVar u) to (VVar u') → s walks v to v' →
+    s unifies (VVar u) w/ v to (extend u' v' s)
   UvarR : ∀ {u v s u' v'} →
-    s walks u to u' → s walks (VVar v) to (VVar v') → s unifies u w/ (VVar v)
-  Ulists : ∀ {u v s u' v' α β} →
-    s walks u to (VList (α ∷ u')) → s walks v to (VList (β ∷ v'))
-    → s unifies α w/ β → s unifies (VList u') w/ (VList v') → s unifies u w/ v 
+    s walks u to u' → s walks (VVar v) to (VVar v') →
+    s unifies u w/ (VVar v) to (extend v' u' s)
+  Ulists : ∀ {u v s s' s'' u' v' α β} →
+    s walks u to (VList (α ∷ u')) → s walks v to (VList (β ∷ v')) →
+    s unifies α w/ β to s' → s unifies (VList u') w/ (VList v') to s'' →
+    s unifies u w/ v to s''
   Uvals : ∀ {u v s u' v'} →
-    s walks u to u' → s walks v to v' → (u' val=? v') → s unifies u w/ v 
+    s walks u to u' → s walks v to v' → (u' val=? v') → s unifies u w/ v to s
+
+-- examples of unify
+s1 : Subst
+s1 = ((var "x") , (VVar (var "y"))) , ((var "y") , (VNum 3)) , □ 
+
+t1 : s1 unifies (VNum 3) w/ (VNum 3) to s1
+t1 = Uvals walkN walkN (num=? refl)
+
+t2 : s1 unifies (VVar (var "x")) w/ (VNum 3) to s1
+t2 = Uvals (walkGo (walkGo walkN (skip here)) here) walkN (num=? refl)
+
+t3 : s1 unifies (VVar (var "z")) w/ (VVar (var "y")) to (((var "z") , (VNum 3)) , s1)
+t3 = UvarL (walkFr (nope (nope empty))) (walkGo walkN (skip here))
 
 -- substitution and counter
 State : Set
@@ -78,5 +105,4 @@ Unit = List State
 unit : State → Unit
 unit s = s ∷ []
 
--- data _==_toUnit_ : Val → Val → Unit → Set where 
-  -- fail : ∀ {u v s} → ¬ s unifies u w/ v → u == v toUnit []
+
