@@ -3,17 +3,18 @@ module microKanren where
 open import Data.Empty
 open import Data.Unit hiding (_≟_)
 open import Data.Nat hiding (_≟_)
-open import Data.String as S
+open import Data.String hiding ( _==_ ; show)
 open import Data.Vec hiding (_∈_)
 open import Data.List hiding ([_]) 
 open import Data.Sum
+open import Data.Nat.Show
 
 open import Data.Product
 open import Relation.Nullary
 open import Relation.Binary
 open import Relation.Nullary.Decidable
 open import Relation.Binary.PropositionalEquality hiding ([_])
-open import Data.Bool hiding (_≟_)
+
 
 --------------- Type declarations ---------------
 Var : Set
@@ -49,10 +50,10 @@ data _∈_ : (Var × Val) → Subst → Set where
 -- (x , v) ∈? □ = no (λ ())
 -- (  x ∷ [] , v) ∈? (( x' ∷ [] , v') , s) = if (x == x') then yes here else ?
 
-data _∉_ : (Var × Val) → Subst → Set where
-  empty : ∀ {x v} → (x , v) ∉ □
-  nope  : ∀ {s x v x' v'} → {α : False (x ≟ x')} →
-   ((var x) , v) ∉ s → ((var x) , v) ∉ (([ x' ] , v') , s)
+data _∉_ : Var → Subst → Set where
+  empty : ∀ {x} → x ∉ □
+  nope  : ∀ {s x x' v'} → {α : False (x ≟ x')} →
+   (var x) ∉ s → (var x) ∉ (([ x' ] , v') , s)
 
 
 extend : Var → Val → Subst → Subst
@@ -61,7 +62,7 @@ extend x v s = (x , v) , s
 data _walks_to_ : Subst → Val → Val → Set where
   walkN : ∀ {s x} → s walks (VNum x) to (VNum x)
   walkS : ∀ {s x} → s walks (VStr x) to (VStr x)
-  walkFr : ∀ {s x v} → (x , v) ∉ s → s walks (VVar x) to (VVar x)
+  walkFr : ∀ {s x} → x ∉ s → s walks (VVar x) to (VVar x)
   walkGo : ∀ {s x v x'} → s walks x' to v → (x , x') ∈ s →
             s walks (VVar x) to v
 
@@ -105,4 +106,22 @@ Unit = List State
 unit : State → Unit
 unit s = s ∷ []
 
+data Fail : Set where
+  sucks : Fail
+
+unify : (u : Val) → (v : Val) → (s : Subst) → Fail ⊎ Σ[ s' ∈ Subst ] (s unifies u w/ v to s')
+unify u v s = {!!} 
+
+==-helper : ∀ {s u v} → ℕ → Fail ⊎ Σ[ s' ∈ Subst ] (s unifies u w/ v to s') → State
+==-helper n (inj₁ x) = (□ , n)
+==-helper n (inj₂ (s' , unif)) = (s' , n)
+
+_==_ : Val → Val → State → State
+u == v = λ s/c → let c = (proj₂ s/c)
+                     res = unify u v (proj₁ s/c)
+                 in ==-helper c res
+
+call/fresh : (Var → State → State) → State → State
+call/fresh f = λ s/c → let c = (proj₂ s/c)
+                       in f (var (show c)) ((proj₁ s/c) , suc c)
 
