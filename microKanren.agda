@@ -2,7 +2,7 @@ module microKanren where
 
 open import Data.Empty
 open import Data.Unit hiding (_≟_)
-open import Data.Nat hiding (_≟_)
+open import Data.Nat renaming (_≟_ to _ℕ=_ ) 
 open import Data.String hiding ( _==_ ; show)
 open import Data.Vec hiding (_∈_)
 open import Data.List hiding ([_]) 
@@ -109,8 +109,34 @@ unit s = s ∷ []
 data Fail : Set where
   sucks : Fail
 
+unify-help-num : (n : ℕ) → (m : ℕ) → (s : Subst) → Fail ⊎ Σ[ s' ∈ Subst ] (s unifies (VNum n) w/ (VNum m) to s')
+unify-help-num n m s with n ℕ= m
+...                  | (yes p) = inj₂ (s , Uvals walkN walkN (num=? p))
+...                  | (no _) = inj₁ sucks 
+
+
+unify-help-str : (u : String) → (v : String) → (s : Subst) → Fail ⊎ Σ[ s' ∈ Subst ] (s unifies (VStr u) w/ (VStr v) to s')
+unify-help-str u v s with u ≟ v
+...                  | (yes p) = inj₂ (s , Uvals walkS walkS (str=? p))
+...                  | (no _) = inj₁ sucks 
+
 unify : (u : Val) → (v : Val) → (s : Subst) → Fail ⊎ Σ[ s' ∈ Subst ] (s unifies u w/ v to s')
-unify u v s = {!!} 
+unify (VNum x) (VNum x₁) s = unify-help-num x x₁ s
+unify (VNum x) (VStr x₁) s = inj₁ sucks
+unify (VNum x) (VList x₁) s = inj₁ sucks
+unify (VNum x) (VVar x₁) s = {!!}
+unify (VStr x) (VNum x₁) s = {!!}
+unify (VStr x) (VStr x₁) s = unify-help-str x x₁ s
+unify (VStr x) (VList x₁) s = inj₁ sucks
+unify (VStr x) (VVar x₁) s = {!!}
+unify (VList x) (VNum x₁) s = inj₁ sucks
+unify (VList x) (VStr x₁) s = inj₁ sucks
+unify (VList x) (VList x₁) s = {!!}
+unify (VList x) (VVar x₁) s = {!!}
+unify (VVar x) (VNum x₁) s = {!!}
+unify (VVar x) (VStr x₁) s = {!!}
+unify (VVar x) (VList x₁) s = {!!}
+unify (VVar x) (VVar x₁) s = {!!} 
 
 ==-helper : ∀ {s u v} → ℕ → Fail ⊎ Σ[ s' ∈ Subst ] (s unifies u w/ v to s') → State
 ==-helper n (inj₁ x) = (□ , n)
