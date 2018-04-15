@@ -8,13 +8,15 @@ open import Data.Vec hiding (_∈_)
 open import Data.List hiding ([_]) 
 open import Data.Sum
 open import Data.Nat.Show
+open import Data.Colist hiding (_∈_ ; [_])
+open import Agda.Builtin.Coinduction
 
 open import Data.Product
 open import Relation.Nullary
 open import Relation.Binary
 open import Relation.Nullary.Decidable
 open import Relation.Binary.PropositionalEquality hiding ([_])
-
+open ≡-Reasoning
 
 --------------- Type declarations ---------------
 Var : Set
@@ -46,10 +48,6 @@ data _∈_ : (Var × Val) → Subst → Set where
   skip : ∀ {s x v x' v'} →
    {α : False (x ≟ x')} → ((var x) , v) ∈ s → ((var x) , v) ∈ (([ x' ] , v') , s)
 
--- _∈?_ : Decidable _∈_
--- (x , v) ∈? □ = no (λ ())
--- (  x ∷ [] , v) ∈? (( x' ∷ [] , v') , s) = if (x == x') then yes here else ?
-
 data _∉_ : Var → Subst → Set where
   empty : ∀ {x} → x ∉ □
   nope  : ∀ {s x x' v'} → {α : False (x ≟ x')} →
@@ -62,6 +60,7 @@ extend x v s = (x , v) , s
 data _walks_to_ : Subst → Val → Val → Set where
   walkN : ∀ {s x} → s walks (VNum x) to (VNum x)
   walkS : ∀ {s x} → s walks (VStr x) to (VStr x)
+  walkL : ∀ {s x} → s walks (VList x) to (VList x)
   walkFr : ∀ {s x} → x ∉ s → s walks (VVar x) to (VVar x)
   walkGo : ∀ {s x v x'} → s walks x' to v → (x , x') ∈ s →
             s walks (VVar x) to v
@@ -109,6 +108,19 @@ unit s = s ∷ []
 data Fail : Set where
   sucks : Fail
 
+_∈?_ : Decidable _∈_
+x ∈? □ = no (λ ())
+((x ∷ [])  , v)  ∈? (((x₁ ∷ [])  , v₁) , s) with (x ≟ x₁) 
+...                                         | (yes refl) = {!!}
+...                                         | (no noteq) with ((x ∷ [])  , v) ∈? s
+...                                                  | yes later = yes (skip later)
+...                                                  | no never = {!!}
+
+walk : (u : Val) → (s : Subst) → Σ[ v ∈ Val ] (s walks u to v)
+walk (VNum x) s = (VNum x) , walkN
+walk (VStr x) s = (VStr x) , walkS
+walk (VList x) s = (VList x) , walkL
+walk (VVar x) s = {!!}
 unify-help-num : (n : ℕ) → (m : ℕ) → (s : Subst) → Fail ⊎ Σ[ s' ∈ Subst ] (s unifies (VNum n) w/ (VNum m) to s')
 unify-help-num n m s with n ℕ= m
 ...                  | (yes p) = inj₂ (s , Uvals walkN walkN (num=? p))
@@ -151,3 +163,128 @@ call/fresh : (Var → State → State) → State → State
 call/fresh f = λ s/c → let c = (proj₂ s/c)
                        in f (var (show c)) ((proj₁ s/c) , suc c)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---  conj and disj
+-- data MPlus : State → Set where
+--   mzero : ∀ {s} → MPlus s
+
+
+-- alt, using streams
+  
+  
+data MPlus : (Colist State) -> Set where
+  --  mzero : ∀ {s} → MPlus s
+
+
+Ans : Set
+Ans = Colist State
+
+mzero : Ans
+mzero = []
+
+
+mplus : Ans → Ans → Ans
+mplus [] b = b
+mplus (x ∷ xs) b = x ∷ ♯ (mplus b (♭ xs))
+
+
+Goal : Set
+Goal = State → Ans
+
+{-# TERMINATING #-}
+bind : Ans → Goal → Ans
+bind [] g = mzero
+bind (x ∷ xs) g = mplus (g x) (bind (♭ xs) g)
+
+disj : Goal → Goal → State → Ans
+disj g1 g2 = λ s/c → mplus (g1 s/c) (g2 s/c)
+
+conj : Goal → Goal → State → Ans
+conj g1 g2 = λ s/c → bind (g1 s/c) g2
+
+
+----- Simple proofs
+
+coDbl : Ans → Ans
+coDbl [] = []
+coDbl (x ∷ xs) = x ∷ ♯ (x ∷ (♯ (coDbl (♭ xs))))
+
+
+
+disj-id : ∀ {s} → (g : Goal)  → (disj g g s) ≡ (coDbl (g s))
+disj-id {s} g with (g s)
+...          | [] = refl
+...          | (x ∷ xs) = 
+               begin
+                mplus (x ∷ xs) (x ∷ xs)
+                ≡⟨ {!refl!} ⟩
+                x ∷  ♯ (mplus (x ∷ xs) (♭ xs))
+                ≡⟨ {!!} ⟩
+                {!!} -- x ∷ ♯ (x ∷ (♯ (coDbl (♭ xs))))
+                ≡⟨ refl ⟩
+                coDbl (x ∷ xs)∎
+
+
+-- conj-lemma₂ : ∀ {s} → (a₁ a₂ : Ans) → {g₁ g₂ : Goal} → (a₁ ≡ (g₂ s)) → (a₂ ≡ (g₁ s)) → bind a₁ g₁ ≡ bind a₂ g₂
+{-- conj-lemma₂ [] [] {g₁} {g₂} p₁ p₂ = refl
+conj-lemma₂ [] (x ∷ xs) {g₁} {g₂} p₁ p₂ = {!!}
+conj-lemma₂ (x ∷ xs) [] {g₁} {g₂} p₁ p₂ = {!!}
+conj-lemma₂ (x ∷ xs) (x₁ ∷ xs₁) {g₁} {g₂} p₁ p₂ = 
+            begin
+              bind (x ∷ xs) g₁
+              ≡⟨ refl ⟩
+              mplus (g₁ x) (bind (♭ xs) g₁)
+              ≡⟨ {!!} ⟩
+              mplus (g₂ x₁) (bind (♭ xs) g₁) 
+              ≡⟨ cong (λ q → mplus (g₂ x₁) q) (conj-lemma₂ (♭ xs₁) ⟩
+              mplus (g₂ x₁) (bind (♭ xs₁) g₂)
+              ≡⟨ refl ⟩
+              bind (x₁ ∷ xs₁) g₂ ∎ --} 
+conj-lemma : (g1 g2 : Goal) → {s : State} → bind (g1 s) g2 ≡ bind (g2 s) g1
+conj-lemma g1 g2 {s} with (g1 s) | (g2 s) 
+...                  |  [] | [] = refl
+...                  |  [] | (x ∷ xs) =
+                             begin
+                               bind [] g2
+                               ≡⟨ refl ⟩
+                               mzero
+                               ≡⟨ {!!} ⟩
+                               bind (x ∷ xs) g1 ∎
+...                  |  (x ∷ xs) | [] = {!!}
+...                  |  (x ∷ xs) | (x₂ ∷ xs₂)= {!!} 
+
+conj-comm : (g1 g2 : Goal) → {s : State} → conj g1 g2 s ≡ conj g2 g1 s
+conj-comm g1 g2 {s} = conj-lemma g1 g2 {s}
+
+-- conj-assoc : (g1 g2 g3 : Goal) → {s : State} → (bind (conj g1 g2 s) g3) ≡ ( (conj g1 g2 s) g3 s)
+-- conj-assoc = ?
