@@ -1,0 +1,8 @@
+#lang racket
+
+
+(define (valof exp)
+  (match exp
+    [0 '()]
+    [1 '("")]
+    [(? symbol?) (list exp)]))
