@@ -123,12 +123,6 @@ finiteAnswers (suc n) e =  takeStep {[]} (valof e) n (finiteAnswers n e)
 -- Proof 2 : The elimination of + is correct
 
 +=* : (n : ℕ) → (e : RE) → (get-chars n (+ e)) ≡ (get-chars n (• e (* e)))
-+=* n ∅ = {!!}
-+=* n ε = {!!}
-+=* n (Sym x) = {!!}
-+=* n (∪ e e₄) = {!!}
-+=* n (• e e₄) = {!!}
-+=* n (* e) = {!!}
-+=* n (+ e) = {!!}
++=* n e = refl
 
 
