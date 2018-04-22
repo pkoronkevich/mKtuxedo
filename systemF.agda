@@ -1,7 +1,7 @@
 module systemF where
 
 open import Data.String
-open import Data.Nat hiding (_≟_)
+open import Data.Nat hiding (_≟_ ; _>_)
 open import Data.Product hiding (map)
 open import Data.List
 open import Data.Bool hiding (_≟_)
@@ -123,8 +123,7 @@ fresh xs = fromList (foldl diagonalize [ 'z' ] (Data.List.map toList xs))
 
 renameVarτ : {i : Size} → STyp {i} → String → String → STyp {i}
 renameVarτ SInt s₁ s₂ = SInt
-renameVarτ (STvar {i} x) s₁ s₂ =
-  if x == s₂ then STvar {i} s₁ else STvar {i} x
+renameVarτ (STvar {i} x) s₁ s₂ = if x == s₂ then STvar {i} s₁ else STvar {i} x
 renameVarτ (τ S⇒ τ₁) s₁ s₂ = (renameVarτ τ s₁ s₂) S⇒ (renameVarτ τ₁ s₁ s₂)
 renameVarτ (S∀τ {i} x τ) s₁ s₂ =
   if x == s₂
@@ -133,9 +132,22 @@ renameVarτ (S∀τ {i} x τ) s₁ s₂ =
            ns = fresh conflicts
        in S∀τ {i} ns (renameVarτ {i} (renameVarτ {i} τ ns x) s₁ s₂)
 
+renameVarτₑ : {i : Size} → SExp {i} → String → String → SExp {i}
+renameVarτₑ .{↑ i} (Svar {i} s₂) s₃ s₁ = (Svar s₂)
+renameVarτₑ .{↑ i} (Sint {i} x) s₃ s = (Sint x)
+renameVarτₑ .{↑ i} (Slam {i} s₁ t e₁) s₃ s₂ = (Slam s₁ (renameVarτ t s₃ s₂) (renameVarτₑ e₁ s₃ s₂))
+renameVarτₑ .{↑ i} (Sapp {i} e₁ e₂) s₃ s = Sapp {i} (renameVarτₑ {i} e₁ s₃ s) (renameVarτₑ {i} e₂ s₃ s)
+renameVarτₑ .{↑ i} (SΛapp {i} e₁ t) s₃ s = SΛapp {i} (renameVarτₑ {i} e₁ s₃ s) (renameVarτ t s₃ s)
+renameVarτₑ .{↑ i} (Sadd1 {i} n) s₃ s = Sadd1 (renameVarτₑ {i} n s₃ s)
+renameVarτₑ .{↑ i} (SΛ {i} s₁ e) s₃ s₂ = 
+  if s₁ == s₂
+  then SΛ {i} s₁ e
+  else let conflicts = [ s₂ ] ∪ ([ s₃ ] ∪ fv (Λ s₁ (unsize e)))
+           ns = fresh conflicts
+       in SΛ {i} ns (renameVarτₑ {i} (renameVarτₑ {i} e ns s₁) s₃ s₂)
+
 renameVar : {i : Size} → SExp {i} → String → String → SExp {i}
-renameVar .{↑ i} (Svar {i} s₂) s₃ s₁ = 
-  if s₁ == s₂ then Svar {i} s₃ else Svar {i} s₂
+renameVar .{↑ i} (Svar {i} s₂) s₃ s₁ = if s₁ == s₂ then Svar {i} s₃ else Svar {i} s₂
 renameVar .{↑ i} (Slam {i} s₁ t e₁) s₃ s₂ = 
   if s₁ == s₂
   then Slam {i} s₁ t e₁
@@ -148,14 +160,7 @@ renameVar .{↑ i} (SΛapp {i} e₁ t) s₃ s =
   SΛapp {i} (renameVar {i} e₁ s₃ s) (renameVarτ t s₃ s)
 renameVar .{↑ i} (Sint {i} x) s₃ s = (Sint x)
 renameVar .{↑ i} (Sadd1 {i} n) s₃ s = Sadd1 (renameVar {i} n s₃ s)
-renameVar .{↑ i} (SΛ {i} s₁ e) s₃ s₂ =
-  if s₁ == s₂
-  then SΛ {i} s₁ e
-  else let conflicts = [ s₂ ] ∪ ([ s₃ ] ∪ fv (Λ s₁ (unsize e)))
-           ns = fresh conflicts
-       in SΛ {i} ns (renameVar {i} (renameVar {i} e ns s₁) s₃ s₂)
-
-
+renameVar .{↑ i} (SΛ {i} s₁ e) s₃ s₂ = (SΛ {i} s₁ (renameVar {i} e s₃ s₂))
 
 _[_/_]τ' : {i : Size} → STyp {i} → Typ → String → Typ
 SInt [ α / β ]τ' = Int
@@ -168,6 +173,21 @@ S∀τ x t [ α / β ]τ' =
            s₃ = fresh conflicts
        in ∀τ s₃ ((renameVarτ t s₃ x) [ α / β ]τ')
 
+
+_[_/_]τₑ' : {i : Size} → SExp {i} → Typ → String → Exp
+Svar s₂ [ e / s₁ ]τₑ' = (var s₂)
+Slam s₁ t e₁ [ e₂ / s₂ ]τₑ' = lam s₁ (t [ e₂ / s₁ ]τ') (e₁ [ e₂ / s₁ ]τₑ')
+Sapp e₁ e₂ [ e₃ / s ]τₑ' = app (e₁ [ e₃ / s ]τₑ') (e₂ [ e₃ / s ]τₑ')
+Sint x₁ [ e / x ]τₑ' = int x₁
+Sadd1 s [ e / x ]τₑ' = add1 (s [ e / x ]τₑ')
+SΛ x₁ s [ e / x ]τₑ' =
+  if x₁ == x 
+  then Λ x₁ (unsize s)
+  else let conflicts = [ x ] ∪ (fvτ e ∪ fv (Λ x₁ (unsize s)))
+           s₃ = fresh conflicts
+       in Λ s₃ ((renameVarτₑ s s₃ x₁) [ e / x ]τₑ')
+SΛapp s x₁ [ e / x ]τₑ' = Λapp (s [ e / x ]τₑ') (x₁ [ e / x ]τ')
+
 _[_/_]' : {i : Size} → SExp {i} → Exp → String → Exp
 Svar s₂ [ e / s₁ ]' = if s₁ == s₂ then e else var s₂
 Slam s₁ t e₁ [ e₂ / s₂ ]' =
@@ -179,20 +199,20 @@ Slam s₁ t e₁ [ e₂ / s₂ ]' =
 Sapp e₁ e₂ [ e₃ / s ]' = app (e₁ [ e₃ / s ]') (e₂ [ e₃ / s ]')
 Sint x₁ [ e / x ]' = int x₁
 Sadd1 s [ e / x ]' = add1 (s [ e / x ]')
-SΛ x₁ s [ e / x ]' =
-  if x₁ == x 
-  then Λ x₁ (unsize s)
-  else let conflicts = [ x ] ∪ (fv e ∪ fv (Λ x₁ (unsize s)))
-           s₃ = fresh conflicts
-       in Λ s₃ ((renameVar s s₃ x₁) [ e / x ]')
+SΛ x₁ s [ e / x ]' = Λ x₁ (s [ e / x ]')
 SΛapp s x₁ [ e / x ]' = Λapp (s [ e / x ]') (unsizeτ x₁)
 
+
+_[_/_]τ : Typ → Typ → String → Typ
+e [ e' / x ]τ = (sizeτ e) [ e' / x ]τ'
+
+_[_/_]τₑ : Exp → Typ → String → Exp
+e [ e' / x ]τₑ = (size e) [ e' / x ]τₑ'
 
 _[_/_] : Exp → Exp → String → Exp
 e [ e' / x ] = (size e) [ e' / x ]'
 
-_[_/_]τ : Typ → Typ → String → Typ
-e [ e' / x ]τ = (sizeτ e) [ e' / x ]τ'
+
 
 data _⊢_∷_ : Ctx → Exp → Typ → Set where
     NumT  : ∀ {Γ n} → Γ ⊢ (int n) ∷ Int
@@ -260,6 +280,16 @@ data State : Set where
   Enter  : Closure → Cont → State
   Return : Cont → Val → State
 
+data _>_ : Exp × String × Typ → Exp → Set where
+  Var>  : ∀ {x α τ} → ((var x) , α , τ) > (var x)
+  Int>  : ∀ {n α τ} → ((int n) , α , τ) > (int n)
+  Add1> : ∀ {e α τ e'} → (e , α , τ) > e' → ((add1 e) , α , τ) > (add1 e')
+  Lam>  : ∀ {α x τₓ b b' τ} → (b , α , τ) > b' → ((lam x τₓ b) , α , τ) > (lam x (τₓ [ τ / α ]τ) b')
+  Λ>    : ∀ {α x b τ} → ((Λ x b) , α , τ) > (Λ x b [ τ / α ]τₑ)
+  App>  : ∀ {α e₁ e₁' e₂ e₂' τ} → (e₁ , α , τ) > e₁' →  (e₂ , α , τ) > e₂' →
+          ((app e₁ e₂) , α , τ) > (app e₁ e₂)
+  ΛApp> : ∀ {α e e' t τ} → (e , α , τ) > e' → (Λapp e t , α , τ) > (Λapp e (t [ τ / α ]τ))
+  
 data _↦_ : State → State → Set where
   VarE   : ∀ {x v ρ κ} → ((x , v) ∈ₑ ρ) → (Enter (var x , ρ) κ) ↦ (Return κ v)
   IntE   : ∀ {n ρ κ} → (Enter (int n , ρ) κ) ↦ (Return κ (Vnum n))  
@@ -271,8 +301,11 @@ data _↦_ : State → State → Set where
   App₂E  : ∀ {e₁ t ρ κ} → (Enter (Λapp e₁ t , ρ) κ) ↦ (Enter (e₁ , ρ) (AppΛK t ∷ κ))
   App₁FR : ∀ {κ c v} → (Return (AppArgK c ∷ κ) v) ↦ (Enter c (AppFuncK v ∷ κ))
   App₁VR : ∀ {x t κ e ρ v} → (Return (AppFuncK (Vclo x t e ρ) ∷ κ) v) ↦ (Enter (e , (x , v) , ρ) κ)
-  App₂R  : ∀ {κ t x e ρ} → (Return (AppΛK t ∷ κ) (VLam x e ρ)) ↦ (Enter (e , (x , t) ,ₜ ρ) κ)
+  App₂R  : ∀ {κ t x e ρ e₁} → ((e , x , t) > e₁) → (Return (AppΛK t ∷ κ) (VLam x e ρ)) ↦ (Enter (e₁ , ρ) κ)
 
+
+
+infixr 10 _●_
 
 data _↦*_ : State → State → Set where
   ∎   : ∀ {s} → s ↦* s
@@ -282,4 +315,11 @@ Eval : Exp → Val → Set
 Eval e v = (Enter (e , □) []) ↦* (Return [] v)
 
 e₁ e₂ : Exp
-e₁ = (app (lam x Int ))
+e₁ = (app (lam "x" Int (add1 (var "x"))) (int 5))
+e₂ = (app (Λapp (Λ "α" (lam "x" (Tvar "α") (var "x"))) Int) (int 5))
+
+tr₁ : Eval e₁ (Vnum 6)
+tr₁ = App₁E ● LamE ●  App₁FR ● IntE ● App₁VR ● SuccE ● VarE (hereₑ) ● SuccR ● ∎
+
+tr₂ : Eval e₂ (Vnum 5)
+tr₂ = App₁E ● App₂E ● BLamE ● App₂R {!!} ● {!!} ● ∎
