@@ -165,6 +165,15 @@ renameVar .{↑ i} (Sint {i} x) s₃ s = (Sint x)
 renameVar .{↑ i} (Sadd1 {i} n) s₃ s = Sadd1 (renameVar {i} n s₃ s)
 renameVar .{↑ i} (SΛ {i} s₁ e) s₃ s₂ = (SΛ {i} s₁ (renameVar {i} e s₃ s₂))
 
+
+data τSubst : String → Typ → Typ → Typ → Set where
+   τReplace  : ∀ {s τ} → (τSubst s τ (Tvar s) τ)
+   τIgnore   : ∀ {s₁ s₂ τ} → {α : False (s₁ ≟ s₂)} → (τSubst s₁ τ (Tvar s₂) (Tvar s₂))
+   τInt      : ∀ {s τ} → (τSubst s τ Int Int)
+   τ∀ignore  : ∀ {s τ τ₁} → (τSubst s τ (∀τ s τ₁) (∀τ s τ₁))
+   τ∀go-in   : ∀ {s₁ τ s₂ τ₁ τ₃} → {α : False (s₁ ≟ s₂)} → (τSubst s₁ τ τ₁ τ₃) → (τSubst s₁ τ (∀τ s₂ τ₁) (∀τ s₂ τ₃)) 
+   τFunc     : ∀ {s τ A B A' B'} → (τSubst s τ A A') → (τSubst s τ B B') → (τSubst s τ (A ⇒ B) (A' ⇒ B'))
+   
 _[_/_]τ' : {i : Size} → STyp {i} → Typ → String → Typ
 SInt [ α / β ]τ' = Int
 STvar x [ α / β ]τ' = if x == β then α else Tvar x
@@ -230,12 +239,13 @@ data _⊢_∷_ : Ctx → Exp → Typ → Set where
     App₁T : ∀ {Γ e₁ e₂ τ₁ τ₂} →
               (Γ ⊢ e₁ ∷ (τ₁ ⇒ τ₂)) →
               (Γ ⊢ e₂ ∷ τ₁) → (Γ ⊢ (app e₁ e₂) ∷ τ₂)
-    App₂T : ∀ {Γ e τ₁ α τ₂} →
-              (Γ ⊢ e ∷ ∀τ α τ₁) → (Γ ⊢ (Λapp e τ₂)  ∷ (τ₁ [ τ₂ / α ]τ))
+    App₂T : ∀ {Γ e τ₁ α τ₂ τ} →
+              (Γ ⊢ e ∷ ∀τ α τ₁) → (τSubst α τ₂ τ₁ τ) → (Γ ⊢ (Λapp e τ₂) ∷ τ)
 
 --- Dynamic Semantics, bb
 
 data Env : Set
+
 
 data isVal : Exp → Set where
   VNum : {n : ℕ} → isVal (int n)
@@ -269,10 +279,6 @@ data _∈ₑ_ : (String × Val) → Env → Set where
 Closure : Set
 Closure = Exp × Env
 
-data Closure : Set where
-  clo₁ : Exp → Env → Closure
-  clo₂ : Typ → ... → Closure
-
 data Frame : Set where
   SuccK    : Frame
   AppArgK  : Closure → Frame
@@ -286,7 +292,7 @@ Cont = List Frame
 data State : Set where
   Enter  : Closure → Cont → State
   Return : Cont → Val → State
-
+{--
 data _>_ : Exp × String × Typ → Exp → Set where
   Var>  : ∀ {x α τ} → ((var x) , α , τ) > (var x)
   Int>  : ∀ {n α τ} → ((int n) , α , τ) > (int n)
@@ -304,7 +310,7 @@ data _>τ_ : Typ × String → Typ → Set where
    ⇒>τ    : ∀ {τ₁ τ₂ x τ₁' τ₂'} → ((τ₂ , x) >τ τ₁') → ((τ₂ , x) >τ τ₂') → ((τ₁ ⇒ τ₂) , x) >τ (τ₁' ⇒ τ₂')
    ∀τ₁>τ  : ∀ {x x₁ τ} → {α : True (x ≟ x₁)} → (((∀τ x τ) , x₁) >τ (∀τ x τ))  
    ∀τ₂>τ  : ∀ {x x₁ τ τ'} → {α : False (x ≟ x₁)} → ((τ , x₁) >τ τ') → (((∀τ x τ) , x₁) >τ (∀τ x τ'))
-   
+   --}
 data _↦_ : State → State → Set where
   VarE   : ∀ {x v ρ κ} → ((x , v) ∈ₑ ρ) → (Enter (var x , ρ) κ) ↦ (Return κ v)
   IntE   : ∀ {n ρ κ} → (Enter (int n , ρ) κ) ↦ (Return κ (Vnum n))  
@@ -316,7 +322,8 @@ data _↦_ : State → State → Set where
   App₂E  : ∀ {e₁ t ρ κ} → (Enter (Λapp e₁ t , ρ) κ) ↦ (Enter (e₁ , ρ) (AppΛK t ∷ κ))
   App₁FR : ∀ {κ c v} → (Return (AppArgK c ∷ κ) v) ↦ (Enter c (AppFuncK v ∷ κ))
   App₁VR : ∀ {x t κ e ρ v} → (Return (AppFuncK (Vclo x t e ρ) ∷ κ) v) ↦ (Enter (e , (x , v) , ρ) κ)
-  App₂R  : ∀ {κ t x e ρ e₁} → ((e , x , t) > e₁) → (Return (AppΛK t ∷ κ) (VLam x e ρ)) ↦ (Enter (e₁ , ρ) κ)
+  App₂R  : ∀ {κ t x e ρ} → (Return (AppΛK t ∷ κ) (VLam x e ρ)) ↦ (Enter (e , ((x , t) ,ₜ  ρ)) κ)
+  -- App₂R  : ∀ {κ t x e ρ e₁} → ((e , x , t) > e₁) → (Return (AppΛK t ∷ κ) (VLam x e ρ)) ↦ (Enter (e₁ , ρ) κ)
 
 
 infixr 10 _●_
@@ -336,7 +343,7 @@ tr₁ : Eval e₁ (Vnum 6)
 tr₁ = App₁E ● LamE ●  App₁FR ● IntE ● App₁VR ● SuccE ● VarE (hereₑ) ● SuccR ● ∎
 
 tr₂ : Eval e₂ (Vnum 5)
-tr₂ = App₁E ● App₂E ● BLamE ● App₂R (Lam> Var>) ● LamE ● App₁FR ● IntE ● App₁VR ● VarE (hereₑ) ● ∎
+tr₂ = App₁E ● App₂E ● BLamE ● App₂R ● LamE ● App₁FR ● IntE ● App₁VR ● VarE (hereₑ) ● ∎
 
 
 -- equivalences between values,types,envs,contexts
@@ -352,7 +359,7 @@ data _∼_ where
 data _≈_ where
   □≈ : □ ≈ □
   x≈ : ∀ {x y v τ ρ Γ} → x ≡ y → v ∼ τ → ρ ≈ Γ → ((x , v) , ρ) ≈ ((y , τ) , Γ)
-
+  τ≈ : ∀ {x y τ₁ ρ Γ} → x ≡ y  → ρ ≈ Γ → ((x , τ₁) ,ₜ ρ) ≈ (y :τ, Γ)
 
 Γ⇒v : ∀ {x τ Γ ρ} → ρ ≈ Γ → ((x , τ) ∈Γ Γ) → Σ[ v ∈ Val ] (x , v) ∈ₑ ρ
 Γ⇒v □≈ ()
@@ -373,10 +380,9 @@ data _≈_ where
 
 -- closure typing
 
--- _⊢c_ : Closure → Typ → Set
-_⊢c_ : ∀ {e' a t e} → (Closure ⊎ ((e , a , t) > e')) → Typ → Set
-(inj₁ (e , ρ)) ⊢c τ = Σ[ Γ ∈ Ctx ] (ρ ≈ Γ × Γ ⊢ e ∷ τ)
-_⊢c_ {e'} (inj₂ reduc) τ = Σ[ Γ ∈ Ctx ] (Γ ⊢ e' ∷ τ)
+_⊢c_ : Closure → Typ → Set
+(e , ρ) ⊢c τ = Σ[ Γ ∈ Ctx ] (ρ ≈ Γ × Γ ⊢ e ∷ τ)
+
 
 -- Frame typing
 
@@ -384,10 +390,11 @@ data _⊢f_ : Frame → (Typ × Typ) → Set where
   SuccKT :
     SuccK ⊢f (Int , Int)
   AppArgKT : ∀ {cl τ₁ τ₂} →
-    ((inj₁ cl) ⊢c τ₁) → AppArgK cl ⊢f (τ₁ ⇒ τ₂ , τ₂)
+    (cl ⊢c τ₁) → AppArgK cl ⊢f (τ₁ ⇒ τ₂ , τ₂)
   AppFuncKT : ∀ {v τ₁ τ₂} →
     (v ∼ (τ₁ ⇒ τ₂)) → AppFuncK v ⊢f (τ₁ , τ₂)
-  AppΛKT : ∀ {α τ τ₂} → AppΛK τ ⊢f (∀τ α τ₂ , τ₂ [ τ / α ]τ)
+  AppΛKT : ∀ {α τ τ₂ τ₃} →
+    (τSubst α τ τ₂ τ₃) → AppΛK τ ⊢f (∀τ α τ₂ , τ₃)
 
 -- Continuation typing κ ⊢κ (τ , τ)
 
@@ -429,12 +436,12 @@ progress (EnterT (Γ , ρ≈Γ , VarT inΓ) κτ) = inj₂ (_ , VarE (proj₂ (�
 progress (EnterT (Γ , ρ≈Γ , LamT e) κτ) = inj₂ (_ , LamE) 
 progress (EnterT (Γ , ρ≈Γ , AllT e) κτ) = inj₂ (_ , BLamE) 
 progress (EnterT (Γ , ρ≈Γ , App₁T e e₃) κτ) = inj₂ (_ , App₁E) 
-progress (EnterT (Γ , ρ≈Γ , App₂T e) κτ) = inj₂ (_ , App₂E) 
+progress (EnterT (Γ , ρ≈Γ , App₂T f e) κτ) = inj₂ (_ , App₂E) 
 progress (ReturnT EmptyKT v~t) = inj₁ (F v~t)
 progress (ReturnT (PushKT SuccKT x₂) num~) = inj₂ (_ , SuccR)
 progress (ReturnT (PushKT (AppArgKT x) x₂) (clo~ x₃ x₄)) = inj₂ (_ , App₁FR)
 progress (ReturnT (PushKT (AppFuncKT (clo~ x₁ x₃)) x₂) v~t) = inj₂ (_ , App₁VR)
-progress (ReturnT (PushKT AppΛKT x₂) (∀~ x x₁)) = inj₂ (_ , (App₂R {!!}))
+progress (ReturnT (PushKT (AppΛKT τs) x₂) (∀~ x x₁)) = inj₂ (_ , App₂R)
 
 preservation : ∀ {s s' τ} → s ↦ s' → s ⊢s τ → s' ⊢s τ
 preservation IntE (EnterT (Γ , ρ≈Γ , IntT) κt) = ReturnT κt num~
@@ -444,11 +451,11 @@ preservation LamE (EnterT (Γ , ρ≈Γ , LamT v~) κt) = ReturnT κt (clo~ ρ�
 preservation BLamE (EnterT (Γ , ρ≈Γ , AllT v~) κt) = ReturnT κt (∀~ ρ≈Γ v~)
 preservation App₁E (EnterT (Γ , ρ≈Γ , App₁T v~ v~₁) κt) =
   EnterT (Γ , ρ≈Γ , v~) (PushKT (AppArgKT (Γ , ρ≈Γ , v~₁)) κt)
-preservation App₂E (EnterT (Γ , ρ≈Γ , App₂T v~) κt) = EnterT (Γ , ρ≈Γ , v~) (PushKT AppΛKT κt)
+preservation App₂E (EnterT (Γ , ρ≈Γ , App₂T v~ τs) κt) = EnterT (Γ , ρ≈Γ , v~) (PushKT (AppΛKT τs) κt)
 preservation SuccR (ReturnT (PushKT SuccKT x₂) x₁) = ReturnT x₂ num~
 preservation App₁FR (ReturnT (PushKT (AppArgKT (Γ , ρ≈Γ , v~)) κt) x₁) =
   EnterT (Γ , ρ≈Γ , v~) (PushKT (AppFuncKT x₁) κt) 
 preservation (App₁VR {x} {t}) (ReturnT (PushKT (AppFuncKT (clo~ {Γ = Γ} ρ≈Γ x₃)) κt) v~t) = 
   EnterT (((x , t) , Γ) , x≈ refl v~t ρ≈Γ , x₃) κt
-preservation (App₂R {x = x} {e} {e₁ = e₃} x₂) (ReturnT (PushKT AppΛKT κt) x₁) = EnterT {!!} κt
+preservation (App₂R {t = t}) (ReturnT (PushKT (AppΛKT {α} τs) κt) (∀~ ρ≈Γ et)) = EnterT {!?!} κt 
 
