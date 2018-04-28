@@ -1,10 +1,13 @@
 module RE2 where
 
 open import Data.String
-open import Data.List hiding (_++_)
+open import Data.Char hiding (_≟_)
+open import Agda.Builtin.Char
+open import Data.List hiding (_++_; concat)
 open import Data.Bool hiding (_≟_)
 open import Data.Nat hiding (_≟_)
 open import Data.Product
+open import Data.Sum
 open import Data.Unit hiding (_≟_)
 open import Relation.Nullary
 open import Relation.Binary.PropositionalEquality
@@ -67,9 +70,11 @@ set/cons : String → (Stream String) → (Bool × (Stream String))
 set/cons x [] = true , (Cons x [])
 set/cons x (Cons x₁ ls)
   with (x ≟ x₁)
-... | yes pp = (false , (Cons x₁ ls))
+... | yes pp = false , (Cons x₁ ls)
 ... | no _ with (set/cons x ls)
-...        | (a , res) = a , (Cons x₁ res)
+...          | true , res = true , (Cons x₁ res)
+...          | false , res = false , (Cons x₁ res)
+
 set/cons x ($ v) = true , (Cons x [])
 
 take/set : ℕ → (Stream String) → (Stream String) → (Stream String)
@@ -77,8 +82,8 @@ take/set zero ls ans = ans
 take/set (suc n) [] ans = ans
 take/set (suc n) (Cons a d) ans 
   with (set/cons a ans)
-... | (true , res)  = (take/set n d res)
-... | (false , res) = (take/set (suc n) d res)
+... | true , res  = (take/set n d res)
+... | false , res = (take/set (suc n) d res)
 take/set (suc n) ($ x) ans = (take/set (suc n) (x tt) ans)
 
 
@@ -96,7 +101,7 @@ e₃ = (* (• (* (Sym "a")) (∪ (Sym "b") (Sym "c"))))
 a₁ a₂ a₃ : (Stream String)
 a₁ = get-chars 20 e₁
 a₂ = get-chars 10 e₂
-a₃ = get-chars 10 e₃
+a₃ = get-chars 5 e₃
 
 ----------------------------
 -- Proofs about the system
@@ -120,9 +125,119 @@ finiteAnswers zero e = empty
 finiteAnswers (suc n) e =  takeStep {[]} (valof e) n (finiteAnswers n e)
 
 
--- Proof 2 : The elimination of + is correct
+--------------------
+--------------------
+-- Prinf of arbitrary RE's with dependent types!
 
-+=* : (n : ℕ) → (e : RE) → (get-chars n (+ e)) ≡ (get-chars n (• e (* e)))
-+=* n e = refl
+{--
+
+Types of inputs
+%s → String
+%n → Num
+%c → Char
+%(α) → RE
+
+--}
+
+Word : Set
+Word = String
+
+data Printfn : Set where
+  return   : RE → Printfn
+  takeStr  : (String → Printfn) → Printfn
+  takeChar : (Char → Printfn) → Printfn
+  takeNum  : (ℕ → Printfn) → Printfn
+  concat   : Printfn → Printfn → Printfn
+  disj     : Printfn → Printfn → Printfn
+  star     : Printfn → Printfn
+  plus     : Printfn → Printfn
 
 
+-- toString helpers
+doC : Char → RE
+doC c = (Sym (fromList (c ∷ [])))
+
+doN : ℕ → RE
+doN n = (Sym (fromList ((primNatToChar n) ∷ []))) 
+
+
+s₁ s₂ s₃ : Word
+s₁ = "%s is a string"
+s₂ = "either %(∪ %s %n) will be shown!"
+s₃ = "%n is a number, where %((• %n %c)*) has been repeated"
+
+parse' : (List Char) → Printfn
+parse' [] = (return ∅)
+parse' ('%' ∷ []) = (return ∅)
+parse' (x ∷ []) = (return (doC x))
+parse' ('%' ∷ c ∷ xs)
+ with (parse' xs) | c 
+-- taking a string
+... | (return r) | 's' = (takeStr (λ str → (return (• (Sym str) r))))
+... | (takeStr f) | 's' = (takeStr (λ str₁ → (takeStr (λ str₂ → (concat (return (Sym str₁)) (f str₂)))))) 
+... | (takeChar f) | 's' = (takeStr (λ str₁ → (takeChar (λ str₂ → (concat (return (Sym str₁)) (f str₂)))))) 
+... | (takeNum f) | 's' = (takeStr (λ str₁ → (takeNum (λ str₂ → (concat (return (Sym str₁)) (f str₂)))))) 
+... | (concat e₁ e₂) | 's' = (takeStr (λ str₁ → (concat (return (Sym str₁)) (concat e₁ e₂)))) 
+... | (disj e₁ e₂) | 's' = (takeStr (λ str₁ → (concat (return (Sym str₁)) (disj e₁ e₂)))) 
+... | (star e) | 's' = (takeStr (λ str₁ → (concat (return (Sym str₁)) (star e)))) 
+... | (plus e) | 's' = (takeStr (λ str₁ → (concat (return (Sym str₁)) (plus e)))) 
+-- taking a char
+... | (return r) | 'c' = (takeChar (λ c → (return (• (doC c) r))))
+... | (takeStr f) | 'c' = (takeChar (λ c → (takeStr (λ str₂ → (concat (return (doC c)) (f str₂)))))) 
+... | (takeChar f) | 'c' = (takeChar (λ c → (takeChar (λ str₂ → (concat (return (doC c)) (f str₂)))))) 
+... | (takeNum f) | 'c' = (takeChar (λ c → (takeNum (λ str₂ → (concat (return (doC c)) (f str₂)))))) 
+... | (concat e₁ e₂) | 'c' = (takeChar (λ c → (concat (return (doC c)) (concat e₁ e₂)))) 
+... | (disj e₁ e₂) | 'c' = (takeChar (λ c → (concat (return (doC c)) (disj e₁ e₂)))) 
+... | (star e) | 'c' = (takeChar (λ c → (concat (return (doC c)) (star e)))) 
+... | (plus e) | 'c' = (takeChar (λ c → (concat (return (doC c)) (plus e)))) 
+-- taking a number
+... | (return r) | 'n' = (takeNum (λ c → (return (• (doN c) r))))
+... | (takeStr f) | 'n' = (takeNum (λ c → (takeStr (λ str₂ → (concat (return (doN c)) (f str₂)))))) 
+... | (takeChar f) | 'n' = (takeNum (λ c → (takeChar (λ str₂ → (concat (return (doN c)) (f str₂)))))) 
+... | (takeNum f) | 'n' = (takeNum (λ c → (takeNum (λ str₂ → (concat (return (doN c)) (f str₂)))))) 
+... | (concat e₁ e₂) | 'n' = (takeNum (λ c → (concat (return (doN c)) (concat e₁ e₂)))) 
+... | (disj e₁ e₂) | 'n' = (takeNum (λ c → (concat (return (doN c)) (disj e₁ e₂)))) 
+... | (star e) | 'n' = (takeNum (λ c → (concat (return (doN c)) (star e)))) 
+... | (plus e) | 'n' = (takeNum (λ c → (concat (return (doN c)) (plus e)))) 
+-- ill-formed error case
+... | (return r) | bad = (return ∅) 
+... | (takeStr f) | bad = (return ∅)
+... | (takeChar f) | bad = (return ∅)
+... | (takeNum f) | bad = (return ∅)
+... | (concat e₁ e₂) | bad = (return ∅) 
+... | (disj e₁ e₂) | bad = (return ∅) 
+... | (star e) | bad = (return ∅)
+... | (plus e) | bad = (return ∅)
+parse' (a ∷ b ∷ xs) = (concat (return (doC a)) (parse' (b ∷ xs)))
+
+
+data Input : Set where
+   N : ℕ → Input
+   S : String → Input
+   C : Char → Input
+
+use-printfn : Printfn → (List Input) → RE
+use-printfn (return x) [] = x
+use-printfn (return x) (x₁ ∷ l) = ∅
+use-printfn (takeStr x) [] = ∅
+use-printfn (takeStr x) (N x₁ ∷ l) = ∅
+use-printfn (takeStr x) (S x₁ ∷ l) = use-printfn (x x₁) l
+use-printfn (takeStr x) (C x₁ ∷ l) = ∅
+use-printfn (takeChar x) [] = ∅
+use-printfn (takeChar x) (N x₁ ∷ l) = ∅
+use-printfn (takeChar x) (S x₁ ∷ l) = ∅
+use-printfn (takeChar x) (C x₁ ∷ l) = use-printfn (x x₁) l
+use-printfn (takeNum x) [] = ∅
+use-printfn (takeNum x) (N x₁ ∷ l) = use-printfn (x x₁) l
+use-printfn (takeNum x) (S x₁ ∷ l) = ∅
+use-printfn (takeNum x) (C x₁ ∷ l) = ∅
+use-printfn (concat p p₁) ls = (• (use-printfn p ls) (use-printfn p₁ ls)) 
+use-printfn (disj p p₁) ls = (∪ (use-printfn p ls) (use-printfn p₁ ls)) 
+use-printfn (star p) ls = (* (use-printfn p ls))
+use-printfn (plus p) ls = (+ (use-printfn p ls))
+
+print : ℕ → String → (List Input) → (Stream String)  
+print n w ins =
+  let p = (parse' (toList w))
+      r = use-printfn p ins  in
+    get-chars n r
