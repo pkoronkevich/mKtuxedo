@@ -1,0 +1,34 @@
+\documentclass[12pt]{article}
+\usepackage{graphicx}
+ 
+
+\begin{document}
+
+\title{B522 Final Paper}
+\author{Ben Boskin and Paulette Koronkevich}
+\maketitle
+
+
+\section{Overview of project}
+\paragraph{} We first chose $\mu$Kanren as our DSL for the project, but hit many barriers, especially with combination of unification and streams which are found in many logic programming languages. In an effort to use an element of $\mu$Kanren, we decided to use its use of fair disjunction for generating regular expressions.
+\paragraph{} In addition, in order to demonstrate our understanding of an interesting type system, we created an abstract machine for System F.
+
+\subsection{Regular Expressions}
+\paragraph{} Regular expressions are a way to describe regular languages. The grammar of regular expressions that we support are (here). The forms $\cup$ and $\bullet$ require fair disjunction, which is why we chose regular expression as a simplified DSL from $\mu$Kanren.
+\paragraph{} Regular expressions in programming languages are often used in print statements. For example \texttt{printf("dsjlfhdlg")} is a common method for printing (blah). It is an interesting problem to, based on the string, form a dependent function that accepts a variable number of arguments of variable types, depending on excape characters. 
+
+\subsection{System F}
+\paragraph{} System F is a language with polymorphic types. An abstract machine will have a more involved type system than the STLC, with types occuring in expressions. We developed an CEK-style abstract machine for System F and hopefully proved type safety. :(
+\section{Regular Expressions}
+
+\subsection{Fair Disjunction}
+
+\subsection{Dependently Typed \texttt{printf}}
+
+\section{System F}
+
+\subsection{Type Safety}
+
+\end{document}
+
+
