@@ -157,19 +157,79 @@ data Printfn : Set where
 doC : Char → RE
 doC c = (Sym (fromList (c ∷ [])))
 
+
+N→C : ℕ → Char
+N→C 0 = '0'
+N→C (suc n) = (primNatToChar (suc (primCharToNat (N→C n))))
+
 doN : ℕ → RE
-doN n = (Sym (fromList ((primNatToChar n) ∷ []))) 
+doN n = doC (N→C n)
 
 
-s₁ s₂ s₃ : Word
-s₁ = "%s is a string"
-s₂ = "either %(∪ %s %n) will be shown!"
-s₃ = "%n is a number, where %((• %n %c)*) has been repeated"
 
+splitLP : (List Char) → (List Char) → (((List Char) × (List Char)) ⊎ ℕ)
+splitLP [] ls = (inj₂ 0)
+splitLP (')' ∷ xs) [] = inj₁ ([] , xs)
+splitLP (')' ∷ xs) (p ∷ ps) with (splitLP xs ps)
+...                | (inj₁ (e₁ , e₂)) = (inj₁ (e₁ , e₂))
+...                | (inj₂ _) = (inj₂ 0)
+splitLP ('(' ∷ xs) ps with (splitLP xs ('(' ∷ ps))
+...               | (inj₁ (e₁ , e₂)) = inj₁ (e₁ , e₂)
+...               | (inj₂ _) = inj₂ 0
+splitLP (x ∷ xs) ps with (splitLP xs ps)
+...               | (inj₁ (e₁ , e₂)) = (inj₁ ((x ∷ e₁) , e₂))
+...               | (inj₂ _) = (inj₂ 0)
+
+makeRE : (List Char) → Printfn
+
+{-# TERMINATING #-}
+split : (List Char) → ((Printfn × Printfn) ⊎ ℕ)
+split [] = (inj₂ 0)
+split (a ∷ []) = (inj₂ 0)
+split ('%' ∷ 'c' ∷ xs) = (inj₁ ((takeChar (λ c → (return (doC c)))) , (makeRE xs)))
+split ('%' ∷ 's' ∷ xs) = (inj₁ ((takeStr (λ st → (return (Sym st)))) , (makeRE xs)))
+split ('%' ∷ 'n' ∷ xs) = (inj₁ ((takeNum (λ n → (return (doN n)))) , (makeRE xs)))
+split ('(' ∷ xs)
+  with (splitLP xs [])
+... | (inj₁ (e₁ , e₂)) = (inj₁ (makeRE e₁ , (makeRE e₂)))
+... | inj₂ _ = inj₂ 0
+split (' ' ∷ xs) = (inj₁ ((return ε) , (makeRE xs))) 
+split (x ∷ ls) with (split ls)
+...             | (inj₁ (e₁ , e₂)) = (inj₁ ((concat (return (doC x)) e₁) , e₂))
+...             | (inj₂ _) = (inj₂ 0)
+
+makeRE [] = return ε
+makeRE ('%' ∷ []) = return ∅
+makeRE ('∪' ∷ ' ' ∷ xs) with (split xs)
+...                | (inj₁ (e₁ , e₂)) = disj e₁ e₂
+...                | (inj₂ _) = return ∅  
+makeRE ('∪' ∷ xs) with (split xs)
+...                | (inj₁ (e₁ , e₂)) = disj e₁ e₂
+...                | (inj₂ _) = return ∅  
+makeRE ('•' ∷ ' ' ∷ xs) with (split xs)
+...                | (inj₁ (e₁ , e₂)) = concat e₁ e₂
+...                | (inj₂ _) = return ∅  
+makeRE ('•' ∷ xs) with (split xs)
+...                | (inj₁ (e₁ , e₂)) = concat e₁ e₂
+...                | (inj₂ _) = return ∅  
+makeRE ('*' ∷ xs) = (star (makeRE xs))
+makeRE ('+' ∷ xs) = (plus (makeRE xs))
+makeRE ('%' ∷ 's' ∷ []) = (takeStr (λ str → (return (Sym str))))
+makeRE ('%' ∷ 'c' ∷ []) = (takeChar (λ c → (return (doC c))))
+makeRE ('%' ∷ 'n' ∷ []) = (takeNum (λ n → (return (doN n))))
+makeRE ('%' ∷ c ∷ []) = return ∅
+makeRE (a ∷ xs) = concat (return (doC a)) (makeRE xs)
+
+{-# TERMINATING #-}
 parse' : (List Char) → Printfn
-parse' [] = (return ∅)
-parse' ('%' ∷ []) = (return ∅)
-parse' (x ∷ []) = (return (doC x))
+parse' [] = return ε
+parse' ('%' ∷ []) = return ∅
+parse' (x ∷ []) = return (doC x)
+parse' ('%' ∷ '(' ∷ xs) 
+   with (splitLP xs [])
+...  | (inj₁ (e , res)) = (concat (makeRE e) (parse' res))
+...  | (inj₂ _) = (return ∅)
+
 parse' ('%' ∷ c ∷ xs)
  with (parse' xs) | c 
 -- taking a string
@@ -216,6 +276,20 @@ data Input : Set where
    S : String → Input
    C : Char → Input
 
+ass1 : ℕ → ℕ
+ass1 n = suc n
+
+countArgs : Printfn →  ℕ
+countArgs (return x) = 0
+countArgs (takeStr x) = (ass1 (countArgs (x "s")))
+countArgs (takeChar x) = (ass1 (countArgs (x 'c')))
+countArgs (takeNum x) = (ass1 (countArgs (x 0)))
+countArgs (concat n n₁) = (countArgs n) Data.Nat.+ (countArgs n₁)
+countArgs (disj n n₁) = (countArgs n) Data.Nat.+ (countArgs n₁)
+countArgs (star n) = (countArgs n)
+countArgs (plus n) = (countArgs n)
+
+
 use-printfn : Printfn → (List Input) → RE
 use-printfn (return x) [] = x
 use-printfn (return x) (x₁ ∷ l) = ∅
@@ -231,13 +305,39 @@ use-printfn (takeNum x) [] = ∅
 use-printfn (takeNum x) (N x₁ ∷ l) = use-printfn (x x₁) l
 use-printfn (takeNum x) (S x₁ ∷ l) = ∅
 use-printfn (takeNum x) (C x₁ ∷ l) = ∅
-use-printfn (concat p p₁) ls = (• (use-printfn p ls) (use-printfn p₁ ls)) 
-use-printfn (disj p p₁) ls = (∪ (use-printfn p ls) (use-printfn p₁ ls)) 
+use-printfn (concat p p₁) ls =
+  let argsₚ = (countArgs p)
+      res   = (splitAt argsₚ ls) in
+      (• (use-printfn p (proj₁ res)) (use-printfn p₁ (proj₂ res))) 
+use-printfn (disj p p₁) ls =
+  let argsₚ = (countArgs p)
+      res   = (splitAt argsₚ ls) in
+      (∪ (use-printfn p (proj₁ res)) (use-printfn p₁ (proj₂ res)))
 use-printfn (star p) ls = (* (use-printfn p ls))
 use-printfn (plus p) ls = (+ (use-printfn p ls))
 
 print : ℕ → String → (List Input) → (Stream String)  
 print n w ins =
   let p = (parse' (toList w))
-      r = use-printfn p ins  in
+      r = use-printfn p ins in
     get-chars n r
+
+
+
+sₒ s₁ s₂ s₃ : Word
+sₒ = "Hello %(*%s) are you having a %(∪%s%s) day on November %(∪%n%n)th?"
+s₁ = "Dear Resident of %(∪%n (∪%n %n)) %(∪%s %s) street, here's some chars: %(+ (∪ %c %c))."
+s₂ = "My favorite colors are %(* (∪ %s %s))"
+s₃ = "%(•%s (∪%s (∪%s %n)))"
+
+ansₒ : (Stream String)
+ansₒ = print 10 sₒ ((S "Paul") ∷ (S "good") ∷ (S "bad") ∷ (N 3) ∷ (N 8) ∷ [])
+
+ans₁ : (Stream String)
+ans₁ = print 10 s₁ ((N 1) ∷ (N 2) ∷ (N 3) ∷ (S "Madison") ∷ (S "MLK") ∷  (C 'g') ∷ (C 'f') ∷ [])
+
+ans₂ : (Stream String)
+ans₂ = print 10 s₂ ((S "red") ∷ (S "green") ∷ [])
+
+ans₃ : (Stream String)
+ans₃ = print 10 s₃ ((S "1") ∷ (S "2") ∷ (S "hi") ∷ (N 3) ∷ [])
