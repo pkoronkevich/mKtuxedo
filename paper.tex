@@ -1,6 +1,7 @@
 \documentclass[12pt]{article}
-\usepackage{graphicx}
+\usepackage{amsfonts, graphicx}
 \usepackage{enumitem} 
+\newcommand{\N}{\mathbb{N}}
 
 \begin{document}
 
@@ -10,53 +11,75 @@
 
 
 \section{Overview of project}
-\paragraph{} We first chose $\mu$Kanren as our DSL for the project, but hit many barriers, initially in trying to handle the termination of the unification algorithm used, which is not structurally inductive, and secondly in managing streams, and trying to make an equality relation that was practical for and orderless and potentially infinite data structure. In an effort to use an element of $\mu$Kanren, we decided to use its use of MPlus, the monadic computation structure to allow for fair disjunction, as the core for an interpreter for regular expressions.
+\paragraph{} We first chose $\mu$Kanren as our DSL for the project, but hit many barriers. Initially, we found difficulty trying to handle the termination of the unification algorithm used, which is not structurally inductive. Secondly, in trying to make an equality relation that was practical for an orderless and potentially infinite data structures. In an effort to use an element of $\mu$Kanren, we decided to use its monadic computation structure to allow for fair disjunction, as the core for an interpreter for regular expressions.
 \paragraph{} In addition, in order to further demonstrate our understanding of an interesting type system, we created an abstract machine for System F.
 
-\subsection{Regular Expressions}
-\paragraph{} Regular expressions provide a way to describe regular languages, being the simplest class of langauges, and which can be recognized by a DFA. The grammar of regular expressions that we support is:
+\section{Regular Expressions}
+\paragraph{} Regular expressions provide a way to describe regular languages. The grammar of regular expressions that we support is: 
 
+$$E ::= \emptyset \ | \ \epsilon \ | \ x \ | \ E \cup E \ | \ E \bullet E \ | \ E^* \ | \ E^+ $$
 
-$E$ ::=
-\begin{itemize}
-  \item[] $\emptyset$
-  \item[] $\epsilon$
-  \item[] $Sym(x)$
-  \item[] $\cup E E$
-  \item[] $\bullet E E$
-  \item[] $E *$  
-  \item[] $E +$  
-     
-\end{itemize}
+\paragraph{} The forms $\cup$ and $\bullet$ require fair disjunction when paired with the  infinite repetition that comes from $^*$ and $^+$, for example, when generating members of the language described by the RE:
 
-\paragraph{} The forms $\cup$ and $\bullet$ require fair disjunction when paired with the  infinite repetition (i.e. recursion) that comes from $*$ and $+$, for example, when generating members of the langauge described by the RE:
+$$(a^*) \bullet (b^*)$$
 
-$(\bullet (Sym(a) *) (Sym(b) *))$
-
-depending on the implementation, results for the first 8 members of this language could vary, including possibilities such as:
+Depending on the implementation, results for the first 8 members of this language could vary, including possibilities such as:
 
 \begin{enumerate}
-  \item ${\epsilon , a , aa , aaa , aaaa , aaaaa , aaaaaa}$
-  \item ${\epsilon , a , b , ab , aa , bb , aab , abb}$
-\end{enumerate}  
-This process is very similar to the evaluation of a miniKanren expression such as:
+  \item $\{\epsilon , a , aa , aaa , aaaa , aaaaa , aaaaaa, aaaaaaa \}$
+  \item $\{\epsilon , a , b , ab , aa , bb , aab , abb \}$
+  \item $\{\epsilon , bbbbbb , aaabbb , abbb , aaab , abb , a , abbbbbb \}$
+\end{enumerate}
+Clearly, 2 is the better ordering of these, and an ideal implementation would generate all strings of length $n$ before generating strings of length $n + 1$. This process is very similar to the evaluation of a miniKanren expression such as: \newline \\
+\texttt{
+(defrel (in-RE o) \newline
+  \indent (conde \newline
+  \indent \indent [(== o `())] \newline
+  \indent \indent [(fresh (almost) \newline
+  \indent \indent \indent (in-RE almost) \newline
+  \indent \indent \indent (conde \newline
+  \indent \indent \indent \indent [(== o `(a . ,almost))] \newline
+  \indent \indent \indent \indent [(appendo almost (b) o)]))])) \newline \\
+   >(run 8 q (in-RE q)) \newline
+   `(() (a) (b) (a a) (a b) (a a a) (b) (a a b))
+} \\
 
-**MK Example**
-
-, and is why we chose regular expression as a simplified DSL from $\mu$Kanren for our project
-
-.
-\paragraph{} Regular expressions in programming languages are often used in print statements. For example \texttt{printf("dsjlfhdlg")} is a common method for printing (blah). It is an interesting problem to, based on the string, form a dependent function that accepts a variable number of arguments of variable types, depending on excape characters. 
-
-\subsection{System F}
-\paragraph{} System F is a language with polymorphic types. An abstract machine will have a more involved type system than the STLC, with types occuring in expressions. We developed an CEK-style abstract machine for System F and hopefully proved type safety. :(
-\section{Regular Expressions}
+This parallelism is why we chose regular expressions as a simplified DSL from $\mu$Kanren for our project. Our evaluation of the same expression yields the list \texttt{`("" "a" "b" "aa" "bb" "ab" "bbb" "aaa")} which is actually  more fair than the $\mu$Kanren expression!
 
 \subsection{Fair Disjunction}
+The MonadPlus specification includes two operations in addition to the traditional \texttt{return} and \texttt{bind} operations: \texttt{mzero :: ma}, which denotes failure, and \texttt{mplus :: ma -> ma -> ma}, which denotes fair disjunction. This \texttt{mplus} operator is used in $\mu$Kanren \texttt{conde} expressions, but in our implementation of RE's, we use it to implement $\cup$ and $\bullet$.
+\paragraph{} For concatenation $\bullet$, we needed an operator that would mix fair disjunction as well as conjunctive operator, such as string concatenation. We added \texttt{mconj :: ma -> ma -> ma}, which is non-interleaving at top level, but uses \texttt{mplus} to fairly join the first goal with the rest, where the goal is a string. This ensures, as in the previous example, that \texttt{a}'s appear before \texttt{b}'s, but with fair ordering, so \texttt{b} appears before \texttt{ab}. In our original implementation, there were three different functions implementing this, however, by abstracting over the conjunction operator, the three functions became applications of \texttt{mconj} with different conjunctive operators.    
 
-\subsection{Dependently Typed \texttt{printf}}
+\subsection{Streams}
+\paragraph{} Streams are $\mu$Kanren's primary data structure, in order to represent infinite lists of goals, which may or may not be attempted. In the Racket implementation, they are either a simple \texttt{cons} pair, or a thunk, in order to allow the users to ask for a finite amount of answers when infinitely many are available. We adopted a similar implementation for our regular expressions, where these streams represent all possible strings that satisfy the RE specification. \newline \\
+\texttt{data Stream : Set -> Set where \newline
+   \indent []   : {A : Set} -> Stream A \newline
+   \indent Cons : {A : Set} -> (a : A) -> (s : Stream A) -> (Stream A) \newline
+   \indent \$    : {A : Set} -> ($\top$ -> Stream A) -> (Stream A)} 
+\paragraph{}
+As with $\mu$Kanren, we have the users specify the amount of strings they want generated from a given RE. In $\mu$Kanren, the list of answers returned is always a finite list. To ensure this property in our implementation, we defined a property of streams called \texttt{isList}, which ensures a stream holds no thunks (i.e. no occurences of \texttt{\$}). Our implementation has one entry point, the function \texttt{get-chars : $\N$ -> RE -> Stream String}, which we have proven using the \texttt{isList} property always returns a finite list.
+
+\subsection{Depedently typed \texttt{printf}}
+\paragraph{} Regular expressions in programming languages are often used in print statements with non-string data types. For example,
+\begin{center}\texttt{printf("\%n is a number") 3} \end{center}
+is one way to print \texttt{"3 is a number"}. It is an interesting problem to form a typed function that accepts a variable number of arguments of variable types, depending on excape characters found in the string passed to \texttt{printf}. Dependent types are a great method determining the type of such print functions!
+\paragraph{}
+We found a use for our traditional RE's in the context of \texttt{printf} by using the same escape character to have RE's within strings. For example,
+\begin{center} \texttt{print(2, "\%(\%s $\cup$ \%n) is a string or number.") "cat" 3} \end{center}
+would yield the strings \texttt{"cat is a string or number"} and \texttt{"3 is a string or number"}. This \texttt{print} function also takes a number in order to generate a finite amount of strings, even if some RE generates infinite strings.
+
+\subsubsection{Parsing}
+\paragraph{}
+The first task is to parse the given string passed to \texttt{print} into a data structure representing a typed function, which we have named \texttt{Printfn}. This function, when given the right number of typed arguments in the right order, will then return an RE, which our system can then generate the specific number of strings. For the forms $\cup$ and $\bullet$, our parser needed to do extra work to consume both arguments properly. We require whitespace between the arguments, where a mutually recursive helper functions \texttt{split} and \texttt{makeRE} will return the two arguments as RE's.
+
+\subsubsection{From \texttt{Printfn} to Regular Expressions}
+\paragraph{}
+We have the constructors \texttt{return, concat, disj, star,} and \texttt{plus} in our \texttt{Printfn} type, which all correspond to the RE forms mentioned earlier. In addition, we have \texttt{takeStr, takeChar,} and \texttt{takeNum} which correspond to the escape characters found in the input string \texttt{\%s, \%c, \%n} respectively. These ensure the types and ordering of expressions passed to \texttt{print}. When encountering one of these forms, the input is passed to the function captured, ensuring that the types agree.
+\paragraph{} Finally, the resulting RE is passed to our entry point \texttt{get-chars} with the number of outputs desired.
+
 
 \section{System F}
+\paragraph{} System F is a language with polymorphic types. An abstract machine will have a more involved type system than the STLC, with types occuring in expressions. We developed an CEK-style abstract machine for System F and hopefully proved type safety. :(
 
 \subsection{Type Safety}
 
