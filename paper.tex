@@ -1,6 +1,6 @@
 \documentclass[12pt]{article}
 \usepackage{graphicx}
- 
+\usepackage{enumitem} 
 
 \begin{document}
 
@@ -10,11 +10,42 @@
 
 
 \section{Overview of project}
-\paragraph{} We first chose $\mu$Kanren as our DSL for the project, but hit many barriers, especially with combination of unification and streams which are found in many logic programming languages. In an effort to use an element of $\mu$Kanren, we decided to use its use of fair disjunction for generating regular expressions.
-\paragraph{} In addition, in order to demonstrate our understanding of an interesting type system, we created an abstract machine for System F.
+\paragraph{} We first chose $\mu$Kanren as our DSL for the project, but hit many barriers, initially in trying to handle the termination of the unification algorithm used, which is not structurally inductive, and secondly in managing streams, and trying to make an equality relation that was practical for and orderless and potentially infinite data structure. In an effort to use an element of $\mu$Kanren, we decided to use its use of MPlus, the monadic computation structure to allow for fair disjunction, as the core for an interpreter for regular expressions.
+\paragraph{} In addition, in order to further demonstrate our understanding of an interesting type system, we created an abstract machine for System F.
 
 \subsection{Regular Expressions}
-\paragraph{} Regular expressions are a way to describe regular languages. The grammar of regular expressions that we support are (here). The forms $\cup$ and $\bullet$ require fair disjunction, which is why we chose regular expression as a simplified DSL from $\mu$Kanren.
+\paragraph{} Regular expressions provide a way to describe regular languages, being the simplest class of langauges, and which can be recognized by a DFA. The grammar of regular expressions that we support is:
+
+
+$E$ ::=
+\begin{itemize}
+  \item[] $\emptyset$
+  \item[] $\epsilon$
+  \item[] $Sym(x)$
+  \item[] $\cup E E$
+  \item[] $\bullet E E$
+  \item[] $E *$  
+  \item[] $E +$  
+     
+\end{itemize}
+
+\paragraph{} The forms $\cup$ and $\bullet$ require fair disjunction when paired with the  infinite repetition (i.e. recursion) that comes from $*$ and $+$, for example, when generating members of the langauge described by the RE:
+
+$(\bullet (Sym(a) *) (Sym(b) *))$
+
+depending on the implementation, results for the first 8 members of this language could vary, including possibilities such as:
+
+\begin{enumerate}
+  \item ${\epsilon , a , aa , aaa , aaaa , aaaaa , aaaaaa}$
+  \item ${\epsilon , a , b , ab , aa , bb , aab , abb}$
+\end{enumerate}  
+This process is very similar to the evaluation of a miniKanren expression such as:
+
+**MK Example**
+
+, and is why we chose regular expression as a simplified DSL from $\mu$Kanren for our project
+
+.
 \paragraph{} Regular expressions in programming languages are often used in print statements. For example \texttt{printf("dsjlfhdlg")} is a common method for printing (blah). It is an interesting problem to, based on the string, form a dependent function that accepts a variable number of arguments of variable types, depending on excape characters. 
 
 \subsection{System F}
