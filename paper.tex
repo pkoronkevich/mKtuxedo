@@ -1,6 +1,5 @@
 \documentclass[12pt]{article}
-\usepackage{amsfonts, graphicx}
-\usepackage{enumitem} 
+\usepackage{amsfonts, graphicx, enumitem, proof}
 \newcommand{\N}{\mathbb{N}}
 
 \begin{document}
@@ -79,7 +78,34 @@ We have the constructors \texttt{return, concat, disj, star,} and \texttt{plus} 
 
 
 \section{System F}
-\paragraph{} System F is a language with polymorphic types. An abstract machine will have a more involved type system than the STLC, with types occuring in expressions. We developed an CEK-style abstract machine for System F and hopefully proved type safety. :(
+\paragraph{} System F is a language with polymorphic types. An abstract machine will have a more involved type system than the STLC, with types occuring in expressions. We developed an CEK-style abstract machine for System F and proven (???) type safety.
+
+\subsection{Static and Dynamic Semantics}
+\paragraph{} We defined the traditional of System F, along with \texttt{add1} and numbers:
+$$e ::= x \ | \ \lambda x^\tau . e \ | \ \Lambda \alpha . e \ | \ e \ e \ | \ e[\tau] \ | \ \texttt{add1} \ e \ | \ n \mbox{ where } n \in \N$$
+along with types:
+$$\tau ::= \alpha \ | \ \N \ | \ \tau \rightarrow \tau \ | \ \forall \alpha . \tau $$
+\paragraph{} The most interesting typing rule arises from the type substitution case $e[\tau]$, which was presented to us as:
+$$\infer{\Gamma \vdash e[\tau'] : \tau[\tau' / \alpha]} {\Gamma \vdash e : \forall \alpha . \tau }$$
+where $\tau[\tau'/ \alpha]$ is substituting $\tau'$ for $\alpha$ in $\tau$. We decided to represent this substitution with a type, \texttt{$\tau$Subst : String -> Typ -> Typ -> Typ -> Set}, where the string represented the type variable being replaced, the type to replace it with, the type to replace it in, and the resulting type that arises from the type substitution. This results in a typing rule similar to the one represented in class, namely:
+\begin{center}
+\texttt{App$_2$T : $\forall \{ \Gamma \ e \ \tau_1 \ \alpha \ \tau_2 \ \tau \}$ -> ($\Gamma \vdash e :: \forall \alpha \ \tau_1$) -> \newline ($\tau$Subst $\alpha \ \tau_2 \ \tau_1 \ \tau$) -> ($\Gamma \vdash$ ($\Lambda$app e $\tau_2$) $:: \tau$)}
+\end{center}
+
+\subsubsection{Transition rules}
+\paragraph{}
+The following are the transition rules for the CEK-style abstract machine, where \emph{x} is a variable, \emph{e}'s are expressions, $\kappa$ is a stack of frames, \emph{n} is a number, \emph{t} is a type, and $v := n \ | \ \lambda x.e \ | \ \Lambda \alpha.e$:
+$$\langle \langle x , \rho \rangle , \kappa \rangle \Rightarrow \langle \kappa , \rho(x) \rangle$$
+$$\langle \langle \lambda x.e , \rho \rangle , \kappa \rangle \Rightarrow \langle \kappa ,  \langle \lambda x.e , \rho \rangle \rangle$$
+$$\langle \langle \Lambda \alpha.\tau , \rho \rangle , \kappa \rangle \Rightarrow \langle \kappa ,  \langle \Lambda \alpha.\tau , \rho \rangle \rangle$$
+$$\langle \langle n , \rho \rangle , \kappa \rangle \Rightarrow \langle \kappa ,  \langle n , \rho \rangle \rangle$$
+$$\langle \langle \texttt{add1} \ e , \rho \rangle , \kappa \rangle \Rightarrow \langle \langle e , \rho \rangle , \langle \texttt{add1} \ \square , \rho \rangle :: \kappa \rangle$$
+$$\langle \langle e_1 \ e_2 , \rho \rangle , \kappa \rangle \Rightarrow \langle \langle e_1 , \rho \rangle , \langle ( \square \ e_2), \rho \rangle  :: \kappa \rangle$$
+$$\langle \langle e \ t , \rho \rangle , \kappa \rangle \Rightarrow \langle \langle e , \rho \rangle , \langle ( \square \ t), \rho \rangle  :: \kappa \rangle$$
+$$\langle \langle \texttt{add1} \ \square , \rho \rangle :: \kappa , \langle n , \rho \rangle \rangle \Rightarrow \langle \kappa , \langle n + 1 , \rho \rangle \rangle$$
+$$\langle \langle (\square \ e_2), \rho \rangle :: \kappa , \langle v , \rho' \rangle \rangle \Rightarrow \langle \langle e_2 , \rho \rangle, \langle (v \ \square) , \rho \rangle :: \kappa \rangle$$
+$$\langle \langle (\square \ t), \rho \rangle :: \kappa , \langle \Lambda \alpha.e , \rho' \rangle \rangle \Rightarrow \langle \langle e , \rho'[\alpha = t] \rangle, \kappa \rangle$$
+$$\langle \langle \lambda x.e, \rho \rangle :: \kappa , \langle v , \rho' \rangle \rangle \Rightarrow \langle \langle e , \rho[x = v] \rangle, \kappa \rangle$$
 
 \subsection{Type Safety}
 

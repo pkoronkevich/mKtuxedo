@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Arch Linux) (preloaded format=pdflatex 2018.3.5)  2 MAY 2018 12:01
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Arch Linux) (preloaded format=pdflatex 2018.3.5)  2 MAY 2018 23:18
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -62,32 +62,57 @@ Package: enumitem 2011/09/28 v3.5.2 Customized lists
 \enit@toks=\toks16
 \enit@inbox=\box26
 \enitdp@description=\count87
+)
+(/usr/share/texmf-dist/tex/latex/lkproof/proof.sty
+\inferLineSkip=\dimen106
+\inferLabelSkip=\dimen107
+\@LeftOffset=\dimen108
+\@RightOffset=\dimen109
+\@SavedLeftOffset=\dimen110
+\UpperWidth=\dimen111
+\LowerWidth=\dimen112
+\LowerHeight=\dimen113
+\UpperLeftOffset=\dimen114
+\UpperRightOffset=\dimen115
+\UpperCenter=\dimen116
+\LowerCenter=\dimen117
+\UpperAdjust=\dimen118
+\RuleAdjust=\dimen119
+\LowerAdjust=\dimen120
+\RuleWidth=\dimen121
+\HLabelAdjust=\dimen122
+\VLabelAdjust=\dimen123
+\WidthAdjust=\dimen124
+\@UpperPart=\box27
+\@LowerPart=\box28
+\@LabelPart=\box29
+\ResultBox=\box30
 ) (./paper.aux)
 \openout1 = `paper.aux'.
 
-LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
-LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 6.
-LaTeX Font Info:    ... okay on input line 6.
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 5.
+LaTeX Font Info:    ... okay on input line 5.
 
 (/usr/share/texmf-dist/tex/context/base/mkii/supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
 \scratchcounter=\count88
-\scratchdimen=\dimen106
-\scratchbox=\box27
+\scratchdimen=\dimen125
+\scratchbox=\box31
 \nofMPsegments=\count89
 \nofMParguments=\count90
 \everyMPshowfont=\toks17
 \MPscratchCnt=\count91
-\MPscratchDim=\dimen107
+\MPscratchDim=\dimen126
 \MPnumerator=\count92
 \makeMPintoPDFobject=\count93
 \everyMPtoPDFconversion=\toks18
@@ -147,74 +172,77 @@ G,.JBIG2,.JB2,.eps]
 File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
 e
 ))
-LaTeX Font Info:    Try loading font information for U+msa on input line 10.
+LaTeX Font Info:    Try loading font information for U+msa on input line 9.
 
 (/usr/share/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Try loading font information for U+msb on input line 10.
+LaTeX Font Info:    Try loading font information for U+msb on input line 9.
 
 (/usr/share/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) [1
 
 {/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
-Underfull \hbox (badness 10000) in paragraph at lines 33--46
+Underfull \hbox (badness 10000) in paragraph at lines 32--45
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 33--46
+Underfull \hbox (badness 10000) in paragraph at lines 32--45
 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 33--46
+Underfull \hbox (badness 10000) in paragraph at lines 32--45
 
  []
 
 
-Overfull \hbox (8.57355pt too wide) in paragraph at lines 47--48
+Overfull \hbox (8.57355pt too wide) in paragraph at lines 46--47
 \OT1/cmr/m/n/12 the list \OT1/cmtt/m/n/12 `("" "a" "b" "aa" "bb" "ab" "bbb" "aa
 a") \OT1/cmr/m/n/12 which is ac-tu-ally more
  []
 
 [2]
-Underfull \hbox (badness 10000) in paragraph at lines 54--59
+Underfull \hbox (badness 10000) in paragraph at lines 53--58
 
  []
 
 LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <14.4> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 62.
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 61.
 [3]
-Overfull \hbox (2.99867pt too wide) in paragraph at lines 69--70
+Overfull \hbox (2.99867pt too wide) in paragraph at lines 68--69
 \OT1/cmr/m/n/12 would yield the strings \OT1/cmtt/m/n/12 "cat is a string or nu
 mber" \OT1/cmr/m/n/12 and \OT1/cmtt/m/n/12 "3 is a string
  []
 
 LaTeX Font Info:    Font shape `OT1/cmtt/bx/n' in size <12> not available
-(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 75.
-[4] [5] (./paper.aux) ) 
+(Font)              Font shape `OT1/cmtt/m/n' tried instead on input line 74.
+[4] [5] [6] (./paper.aux) ) 
 Here is how much of TeX's memory you used:
- 1815 strings out of 492982
- 26311 string characters out of 6138580
- 84976 words of memory out of 5000000
- 5370 multiletter control sequences out of 15000+600000
- 12741 words of font info for 50 fonts, out of 8000000 for 9000
+ 1869 strings out of 492982
+ 27049 string characters out of 6138580
+ 85716 words of memory out of 5000000
+ 5419 multiletter control sequences out of 15000+600000
+ 13088 words of font info for 51 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  41i,6n,25p,802b,213s stack positions out of 5000i,500n,10000p,200000b,80000s
-</usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cm
-bx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb></usr
-/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-di
-st/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/share/texmf-dist/fonts/type1/
-public/amsfonts/cm/cmr8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/
-cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb><
-/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt12.pfb></usr/share/tex
-mf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb>
-Output written on paper.pdf (5 pages, 95312 bytes).
+</usr/share/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi12.pfb><
+/usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></usr/share/texm
+f-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/ty
+pe1/public/amsfonts/cm/cmr17.pfb></usr/share/texmf-dist/fonts/type1/public/amsf
+onts/cm/cmr8.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.p
+fb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></usr/share/
+texmf-dist/fonts/type1/public/amsfonts/cm/cmti12.pfb></usr/share/texmf-dist/fon
+ts/type1/public/amsfonts/cm/cmtt12.pfb></usr/share/texmf-dist/fonts/type1/publi
+c/amsfonts/symbols/msam10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfont
+s/symbols/msbm10.pfb>
+Output written on paper.pdf (6 pages, 124688 bytes).
 PDF statistics:
- 56 PDF objects out of 1000 (max. 8388607)
- 39 compressed objects within 1 object stream
+ 71 PDF objects out of 1000 (max. 8388607)
+ 50 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
  1 words of extra memory for PDF output out of 10000 (max. 10000000)
 
